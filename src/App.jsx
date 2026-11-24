@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import { configMissing, saveWithGoogle, signOut, authErrorMessage } from './firebase';
 import { useAuth } from './hooks/useAuth';
@@ -6,18 +6,21 @@ import { useDevice } from './hooks/DeviceContext';
 import { OfflineDot, DevicePill } from './components/StatusBar';
 import { Spinner } from './components/Common';
 import Home from './pages/Home';
-import SkillNew from './pages/SkillNew';
-import Skill from './pages/Skill';
-import Interview from './pages/Interview';
-import Guide from './pages/Guide';
-import ApprenticeTest from './pages/ApprenticeTest';
-import Score from './pages/Score';
-import Join from './pages/Join';
-import SetupHelp from './pages/SetupHelp';
-import NotFound from './pages/NotFound';
 import SignIn from './pages/SignIn';
 import Landing from './pages/Landing';
-import Session from './pages/Session';
+import SetupHelp from './pages/SetupHelp';
+
+// The first screen (landing, sign-in, home) ships in the main bundle; every other page,
+// and the AI code they pull in, loads when it's first opened.
+const SkillNew = lazy(() => import('./pages/SkillNew'));
+const Skill = lazy(() => import('./pages/Skill'));
+const Interview = lazy(() => import('./pages/Interview'));
+const Guide = lazy(() => import('./pages/Guide'));
+const ApprenticeTest = lazy(() => import('./pages/ApprenticeTest'));
+const Score = lazy(() => import('./pages/Score'));
+const Join = lazy(() => import('./pages/Join'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const Session = lazy(() => import('./pages/Session'));
 
 /** Rough-ink filters: red-pen circles and rubber stamps get a hand-made edge instead of a vector-perfect one. */
 function InkDefs() {
@@ -100,6 +103,7 @@ export default function App() {
             <Route path="*" element={<SignIn />} />
           </Routes>
         ) : (
+          <Suspense fallback={<Spinner label="Turning the page…" />}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/skills/new" element={<SkillNew />} />
@@ -113,6 +117,7 @@ export default function App() {
             <Route path="/signin" element={<Navigate to="/" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         )}
       </main>
       <footer className="footer">

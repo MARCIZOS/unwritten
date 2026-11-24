@@ -4,7 +4,23 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // The PWA plugin caches the app shell so the interview screen reloads offline.
 export default defineConfig({
-  build: { chunkSizeWarningLimit: 1500 },
+  build: {
+    // The only chunk over 500 kB is the Firestore SDK itself (about 164 kB gzipped), which the
+    // offline cache needs. Everything else is split, so the limit sits just above it.
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        // Each Firebase SDK gets its own long-cached chunk instead of riding in every app update,
+        // and the AI SDK only downloads with the pages that use it.
+        manualChunks(id) {
+          const fb = id.match(/node_modules\/@firebase\/([a-z-]+)/);
+          if (fb) return `firebase-${fb[1].replace(/-(compat|types)$/, '')}`;
+          if (id.includes('node_modules/react')) return 'react';
+          return undefined;
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({

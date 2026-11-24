@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import QRCode from 'qrcode';
 import { inviteLink, rotateInvite } from '../data/skills';
 
 export default function InviteDialog({ skill, onClose }) {
@@ -9,7 +8,9 @@ export default function InviteDialog({ skill, onClose }) {
   const [renewed, setRenewed] = useState(false);
 
   useEffect(() => {
-    QRCode.toDataURL(link, { margin: 1, width: 220, color: { dark: '#2f2a24', light: '#fffdf8' } })
+    // The QR library only loads when someone opens this dialog.
+    import('qrcode')
+      .then((m) => (m.default || m).toDataURL(link, { margin: 1, width: 220, color: { dark: '#2f2a24', light: '#fffdf8' } }))
       .then(setQr)
       .catch(() => setQr(''));
   }, [link]);
