@@ -1,0 +1,99 @@
+rules_version = '2';
+
+// UNWRITTEN security rules.
+// A skill belongs to its owner (ownerUid). Apprentices join by creating their own
+// members/{uid} document carrying the skill's current invite code.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function skillData(skillId) {
+      return get(/databases/$(database)/documents/skills/$(skillId)).data;
+    }
+    function skillExists(skillId) {
+      return exists(/databases/$(database)/documents/skills/$(skillId));
+    }
+    function isOwner(skillId) {
+      return signedIn() && skillExists(skillId) && skillData(skillId).ownerUid == me();
+    }
+    function isMember(skillId) {
+      return isOwner(skillId) || (signedIn() &&
+        exists(/databases/$(database)/documents/skills/$(skillId)/members/$(me())));
+    }
+    function str(v, max) { return v is string && v.size() <= max; }
+    function optStr(data, key, max) { return !(key in data) || str(data[key], max); }
+
+    match /users/{uid} {
+      allow read, write: if signedIn() && me() == uid;
+    }
+
+    match /skills/{skillId} {
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == me()
+        && str(request.resource.data.title, 120)
+        && optStr(request.resource.data, 'description', 2000)
+        && str(request.resource.data.inviteCode, 64)
+        && request.resource.data.currentRound is int;
+      // resource == null: the skill isn't on the server yet (just created, still syncing).
+      // Reading a missing document reveals nothing, and it stops listeners from failing.
+      allow read: if signedIn() && (resource == null || resource.data.ownerUid == me()
+        || exists(/databases/$(database)/documents/skills/$(skillId)/members/$(me())));
+      allow update: if signedIn()
+        && resource.data.ownerUid == me()
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && str(request.resource.data.title, 120);
+      allow delete: if signedIn() && resource.data.ownerUid == me();
+
+      match /members/{uid} {
+        allow read: if isMember(skillId);
+        allow create: if signedIn() && uid == me()
+          && request.resource.data.role == 'apprentice'
+          && request.resource.data.code == skillData(skillId).inviteCode
+          && request.resource.data.keys().hasOnly(['role', 'code', 'joinedAt', 'displayName'])
+          && optStr(request.resource.data, 'displayName', 80);
+        allow delete: if isOwner(skillId) || (signedIn() && uid == me());
+      }
+
+      match /experts/{expertId} {
+        allow read: if isMember(skillId);
+        allow create, update: if isOwner(skillId)
+          && str(request.resource.data.name, 80)
+          && optStr(request.resource.data, 'relation', 80)
+          && optStr(request.resource.data, 'context', 500);
+        allow delete: if isOwner(skillId);
+      }
+
+      match /sessions/{sessionId} {
+        allow read: if isMember(skillId);
+        allow create, update: if isOwner(skillId)
+          && request.resource.data.turns is list
+          && request.resource.data.turns.size() <= 200;
+        allow delete: if isOwner(skillId);
+      }
+
+      match /guides/{guideId} {
+        allow read: if isMember(skillId);
+        allow write: if isOwner(skillId);
+      }
+
+      match /gaps/{gapId} {
+        allow read: if isMember(skillId);
+        allow write: if isOwner(skillId);
+        allow create: if isMember(skillId)
+          && request.resource.data.origin == 'apprentice'
+          && request.resource.data.status == 'open'
+          && str(request.resource.data.text, 1000)
+          && optStr(request.resource.data, 'questionForExpert', 500);
+      }
+
+      match /tests/{testId} {
+        allow read: if isOwner(skillId)
+          || (signedIn() && resource.data.apprenticeUid == me());
+        allow create: if isMember(skillId)
+          && request.resource.data.apprenticeUid == me();
+        allow delete: if isOwner(skillId);
+      }
+    }
+  }
+}
