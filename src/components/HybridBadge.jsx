@@ -1,6 +1,7 @@
 const LABELS = {
   on_device: { text: 'on this device', title: 'Ran on this device with Gemini Nano. No cloud model saw it.', cls: 'badge-device' },
   in_cloud: { text: 'cloud', title: 'Ran on Gemini in the cloud through Firebase AI Logic.', cls: 'badge-cloud' },
+  example: { text: 'example', title: 'Sample content written by hand to show how Unwritten works. No model ran.', cls: 'badge-rules' },
   rules: { text: 'rules', title: 'No model used: keyword rules and question templates.', cls: 'badge-rules' },
 };
 

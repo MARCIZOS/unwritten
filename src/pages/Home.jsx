@@ -1,8 +1,10 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { createExampleSkill } from '../data/example';
 import { useLive } from '../hooks/useLive';
 import { liveOwnedSkills, liveJoinedIds, liveSkill } from '../data/watchers';
-import { Spinner, Empty } from '../components/Common';
+import { Spinner, Empty, ErrorNote } from '../components/Common';
 import { HeroDemo, ChaiStain, Pencil } from '../components/Desk';
 
 
@@ -30,6 +32,24 @@ export default function Home() {
   const [owned, loadingOwned] = useLive(liveOwnedSkills, [user.uid], []);
   const [joined] = useLive(liveJoinedIds, [user.uid], []);
   const sorted = [...(owned || [])].sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+  const navigate = useNavigate();
+  const [opening, setOpening] = useState(false);
+  const [exampleError, setExampleError] = useState(null);
+
+  // One click to a finished notebook: useful before you have an expert to interview.
+  const openExample = async () => {
+    const existing = sorted.find((s) => s.example);
+    if (existing) { navigate(`/s/${existing.id}`); return; }
+    setOpening(true);
+    setExampleError(null);
+    const { id, saved } = createExampleSkill(user.uid);
+    const outcome = await Promise.race([
+      saved.then(() => 'saved', (err) => err),
+      new Promise((resolve) => { setTimeout(() => resolve('queued'), navigator.onLine ? 8000 : 500); }),
+    ]);
+    if (outcome instanceof Error) { setExampleError(outcome); setOpening(false); return; }
+    navigate(`/s/${id}`);
+  };
 
   return (
     <>
@@ -41,7 +61,14 @@ export default function Home() {
               Unwritten interviews an expert the way a curious apprentice would, catches what they know but never say,
               and checks that a beginner can really learn it.
             </p>
-            <Link to="/skills/new" className="btn btn-primary btn-large">Capture a new skill</Link>
+            <div className="hero-actions">
+              <Link to="/skills/new" className="btn btn-primary btn-large">Capture a new skill</Link>
+              <button type="button" className="btn btn-large" onClick={openExample} disabled={opening}>
+                {opening ? 'Opening the example…' : 'Open an example'}
+              </button>
+            </div>
+            <p className="landing-signin">The example is an engineer&apos;s on-call fix, with a finished interview, guide and Transfer Score.</p>
+            {exampleError && <ErrorNote error={exampleError} onRetry={openExample} />}
           </div>
           <div className="spine" aria-hidden="true" />
           <div className="spread-page right">
