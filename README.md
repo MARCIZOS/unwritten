@@ -1,5 +1,7 @@
 # UNWRITTEN — the AI that asks what nobody thought to ask
 
+[![CI](https://github.com/MARCIZOS/unwritten/actions/workflows/ci.yml/badge.svg)](https://github.com/MARCIZOS/unwritten/actions/workflows/ci.yml) [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+
 > Philosopher Michael Polanyi wrote that *we can know more than we can tell*. UNWRITTEN helps us tell it.
 
 Every family and workshop has knowledge that was never written down: *add salt andaz se*, *you just know when the batter is ready*. UNWRITTEN interviews an expert like a curious apprentice, notices the knowledge they use but never say, builds a guide, and then **tests whether a real beginner can learn from it**. Whatever the beginner still can't do goes back to the expert as new questions.
@@ -7,6 +9,18 @@ Every family and workshop has knowledge that was never written down: *add salt a
 It is an AI designed not to replace human expertise, but to help humans pass it on.
 
 Built for **#BuildHybridAI** with the **Firebase AI Logic hybrid inference SDK** (Web / Chrome).
+
+## Try it in 60 seconds
+
+- **Live app:** https://unwritten-16b7e.web.app
+- **Demo video (2:37):** https://www.youtube.com/watch?v=ia77frdh7Qo
+
+1. Open the live app, click **Get started**, then **Continue as a guest** (no sign-up).
+2. Click **Open an example**. You get a finished notebook for an engineer's on-call fix: the interview with its red-pen circles, the guide, Two Voices, the Apprentice Test and the Transfer Score. Everything in it is stamped *example*.
+3. Click **Capture a new skill** and interview someone yourself: a recipe, a repair, a deploy only one person trusts.
+4. To see the interview run **on your device** with Gemini Nano: desktop Chrome 139+, enable `chrome://flags/#prompt-api-for-gemini-nano-multimodal-input`, restart Chrome, and the top bar shows **On-device AI ready**. Without it, the app uses the cloud or its rules automatically.
+
+![An interview in Unwritten: the apprentice circles "andaz se" and asks how much, and every answer is stamped "on this device", even with Wi-Fi off](docs/interview.jpg)
 
 ## The Apprentice Loop
 
@@ -32,9 +46,9 @@ All AI calls go through `firebase/ai` (see [`src/ai/models.js`](src/ai/models.js
 | Apprentice gaps → expert questions | `gapsFromTest` | `PREFER_IN_CLOUD` | Runs on phones with no local model |
 
 - **One JSON Schema per task** constrains both sides: `onDeviceParams.promptOptions.responseConstraint` on-device and `responseJsonSchema` in the cloud ([`src/ai/schemas.js`](src/ai/schemas.js)).
-- **Every response shows where it ran** (On-device / Cloud badge), read from `response.inferenceSource`.
+- **Every response shows where it ran** with a stamp (*on this device*, *cloud* or *rules*), read from `response.inferenceSource`.
 - `initializeDeviceModel()` is called from the *Start interview* click, as Chrome requires a user gesture.
-- **Graceful fallback**: if no model is available, keyword rules and question templates keep the interview going (badge: *Rules*). If the cloud fails during an Apprentice Test, the marked lines become gaps directly.
+- **Graceful fallback**: if no model is available, keyword rules and question templates keep the interview going (stamp: *rules*). If the cloud fails during an Apprentice Test, the marked lines become gaps directly.
 - **Hybrid in one demo**: the expert's laptop runs the interview on-device; the apprentice's phone (no local model) uses the cloud through the same SDK.
 
 ### Other Firebase products
@@ -43,7 +57,7 @@ All AI calls go through `firebase/ai` (see [`src/ai/models.js`](src/ai/models.js
 - **Authentication**: a sign-in screen with **Continue with Google** or **Continue as a guest** (anonymous). A guest can link Google later and keep the same account and skills.
 - **Cloud Firestore** with persistent offline cache: interviews work with Wi-Fi off and sync later; laptop and phone update each other live. Security rules in [`firestore.rules`](firestore.rules).
 - **Remote Config**: cloud model name, cue types, cue keywords, follow-up limits, timeouts and prompt version, tunable without redeploying.
-- **Hosting**: static build plus a PWA app shell that reloads offline.
+- **Hosting**: static build plus a PWA app shell that reloads offline. Pages and the QR library load on demand, and each Firebase SDK ships in its own cached chunk.
 
 ## Run it locally
 
@@ -94,11 +108,13 @@ The interface is the margin of a school notebook. The expert's words are written
 src/
   firebase/   app, App Check, Auth, Firestore (offline cache), Remote Config
   ai/         models (hybrid SDK), schemas, prompts, cues (rules + templates), notes, ledger
-  data/       Firestore reads/writes: skills, experts, sessions, guides, gaps, tests
+  data/       Firestore reads/writes: skills, experts, sessions, guides, gaps, tests, the example notebook
   hooks/      useAuth, useDeviceModel, useSkill, useLive, useOnline
   components/ HybridBadge, CueChip, StatusBar, InviteDialog, PrivacyPanel
-  pages/      Home, SkillNew, Skill, Interview, Guide, ApprenticeTest, Score, Join
+  pages/      Home, SkillNew, Skill, Interview, Guide, ApprenticeTest, Score, Join, Session
 tests/        unit tests for cue detection, grounding, scoring, notes, prompts
+docs/         screenshot for this README
+.github/      CI: install, unit tests and production build on every push
 ```
 
 ## Tests
@@ -106,6 +122,8 @@ tests/        unit tests for cue detection, grounding, scoring, notes, prompts
 ```bash
 npm test
 ```
+
+GitHub Actions runs the tests and a production build on every push and pull request ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
 ## Privacy
 
@@ -115,7 +133,7 @@ The privacy panel (Transfer Score screen) lists every AI call from the browser, 
 
 - On-device mode needs desktop Chrome with the flag above; phones use the cloud.
 - The on-device model outputs English; Hindi words inside English answers ("andaz se") are fine.
-- Some knowledge can't be put into words. UNWRITTEN marks those gaps **learn by doing** instead of pretending.
+- Some knowledge can't be put into words. UNWRITTEN marks those gaps **learn by watching** instead of pretending.
 
 ## License
 
